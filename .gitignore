@@ -68,3 +68,10 @@ azurite.exe
 .pkg-cache
 release
 querydb*.json
+
+*.pfx
+*.key
+*.crt
+
+
+upload-module.sh

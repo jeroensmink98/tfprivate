@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "tfprivate.Api", "tfprivate.Api\tfprivate.Api.csproj", "{C6948B20-B02F-4AE5-ADD8-D69D5188F4FA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "tfprivate.Tests", "tfprivate.Tests\tfprivate.Tests.csproj", "{29F616C3-AF36-4537-AB77-DBF59EE45498}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C6948B20-B02F-4AE5-ADD8-D69D5188F4FA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C6948B20-B02F-4AE5-ADD8-D69D5188F4FA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C6948B20-B02F-4AE5-ADD8-D69D5188F4FA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C6948B20-B02F-4AE5-ADD8-D69D5188F4FA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{29F616C3-AF36-4537-AB77-DBF59EE45498}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{29F616C3-AF36-4537-AB77-DBF59EE45498}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{29F616C3-AF36-4537-AB77-DBF59EE45498}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{29F616C3-AF36-4537-AB77-DBF59EE45498}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
