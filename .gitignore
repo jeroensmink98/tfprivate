@@ -41,3 +41,10 @@ bld/
 msbuild.log
 msbuild.err
 msbuild.wrn
+
+# Azurite
+__azurite__*
+__blobstorage__
+__queuestorage__
+__tablestorage__
+.azurite/
