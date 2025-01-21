@@ -26,3 +26,21 @@ resource "azurerm_storage_container" "main" {
   storage_account_name  = azurerm_storage_account.main.name
   container_access_type = "private"
 }
+
+resource "azurerm_log_analytics_workspace" "main" {
+  name                = "law-tfmodules-${random_string.storage_account_suffix.result}"
+  location            = azurerm_resource_group.main.location
+  resource_group_name = azurerm_resource_group.main.name
+  sku                 = "PerGB2018"
+  retention_in_days   = 30
+}
+
+resource "azurerm_application_insights" "main" {
+  name                = "appi-tfmodules-${random_string.storage_account_suffix.result}"
+  location            = azurerm_resource_group.main.location
+  resource_group_name = azurerm_resource_group.main.name
+  workspace_id        = azurerm_log_analytics_workspace.main.id
+  application_type    = "web"
+}
+
+

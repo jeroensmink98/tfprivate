@@ -117,6 +117,56 @@ GET /api/v1/module/{org}/{module}/{version}
 
 Retrieves a specific version of a module. Version must follow semantic versioning (e.g., 1.0.0).
 
+### Upload Module
+
+```
+POST /api/v1/module/{org}/{module}/{version}
+```
+
+Uploads a new module version. The module must be a `.tgz` archive. This endpoint requires API key authentication.
+
+**Authentication:**
+
+- Required header: `X-API-Key`
+- Configure the API key in `appsettings.json` or environment variables
+
+Supports two upload methods:
+
+1. **Form Upload**
+
+   - Use multipart/form-data
+   - Include the .tgz file in the 'file' field
+   - Maximum file size: 50MB
+
+2. **Direct Upload**
+   - Send the .tgz file directly in the request body
+   - Content-Type should be application/octet-stream
+   - Maximum file size: 50MB
+
+Example using curl:
+
+```bash
+# Form upload
+curl -X POST \
+  -H "X-API-Key: your-api-key" \
+  -F "file=@module.tgz" \
+  https://localhost:7056/api/v1/module/myorg/mymodule/1.0.0
+
+# Direct upload
+curl -X POST \
+  -H "X-API-Key: your-api-key" \
+  --data-binary @module.tgz \
+  https://localhost:7056/api/v1/module/myorg/mymodule/1.0.0
+```
+
+Response:
+
+- 200 OK: Upload successful
+- 400 Bad Request: No file provided or invalid file format
+- 401 Unauthorized: Missing or invalid API key
+- 409 Conflict: Module version already exists
+- 500 Internal Server Error: Upload failed
+
 ## Module Structure
 
 Modules should be packaged as `.tgz` archives with the following structure:

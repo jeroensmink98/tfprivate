@@ -14,6 +14,7 @@ public interface IStorageService
     Task DeleteBlobAsync(string containerName, string blobName);
     Task<IEnumerable<string>> ListVersionsAsync(string containerName, string prefix);
     Task<IEnumerable<ModuleInfo>> ListModulesAsync(string containerName, string org);
+    Task UploadFromStreamAsync(string containerName, string blobName, Stream content);
 }
 
 public class StorageService : IStorageService
@@ -127,5 +128,14 @@ public class StorageService : IStorageService
         {
             throw new InvalidOperationException($"Failed to list modules in container {containerName}: {ex.Message}", ex);
         }
+    }
+
+    public async Task UploadFromStreamAsync(string containerName, string blobName, Stream content)
+    {
+        var container = _blobServiceClient.GetBlobContainerClient(containerName);
+        await container.CreateIfNotExistsAsync();
+
+        var blobClient = container.GetBlobClient(blobName);
+        await blobClient.UploadAsync(content, overwrite: false);
     }
 }
