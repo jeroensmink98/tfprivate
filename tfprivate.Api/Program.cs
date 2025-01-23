@@ -89,6 +89,7 @@ builder.Services.Configure<Microsoft.AspNetCore.Server.Kestrel.Core.KestrelServe
 });
 
 builder.Services.AddSingleton<IStorageService, StorageService>();
+builder.Services.AddSingleton<ITerraformModuleValidator, TerraformModuleValidator>();
 
 var app = builder.Build();
 

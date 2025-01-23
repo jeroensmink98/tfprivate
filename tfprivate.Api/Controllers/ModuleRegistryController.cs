@@ -16,11 +16,13 @@ namespace tfprivate.Api.Controllers;
 public class ModuleRegistryController : ControllerBase
 {
     private readonly IStorageService _storageService;
+    private readonly ITerraformModuleValidator _moduleValidator;
     private const string ModuleContainer = "modules";
 
-    public ModuleRegistryController(IStorageService storageService)
+    public ModuleRegistryController(IStorageService storageService, ITerraformModuleValidator moduleValidator)
     {
         _storageService = storageService;
+        _moduleValidator = moduleValidator;
     }
 
     private IActionResult Error(int statusCode, string message)
@@ -253,38 +255,61 @@ public class ModuleRegistryController : ControllerBase
                     return Error(400, "File must be a .tgz archive");
                 }
 
-                // Get upload URL
-                var uploadUrl = await _storageService.GetUploadUrlAsync(ModuleContainer, blobPath);
-
-                // Create metadata
-                var metadata = new Dictionary<string, string>
+                // Validate module structure
+                using (var stream = file.OpenReadStream())
                 {
-                    { "namespace", @namespace },
-                    { "moduleName", module_name },
-                    { "version", version }
-                };
+                    var validationResult = await _moduleValidator.ValidateModuleArchiveAsync(stream);
+                    if (!validationResult.IsValid)
+                    {
+                        return Error(400, $"Invalid Terraform module structure: {string.Join(", ", validationResult.Errors)}");
+                    }
 
-                // Upload the file directly to blob storage with metadata
-                using var stream = file.OpenReadStream();
-                await _storageService.UploadFromStreamAsync(ModuleContainer, blobPath, stream, metadata);
+                    // Reset stream position for upload
+                    stream.Position = 0;
 
-                return Ok(new { url = uploadUrl.ToString() });
+                    // Get upload URL
+                    var uploadUrl = await _storageService.GetUploadUrlAsync(ModuleContainer, blobPath);
+
+                    // Create metadata
+                    var metadata = new Dictionary<string, string>
+                    {
+                        { "namespace", @namespace },
+                        { "moduleName", module_name },
+                        { "version", version }
+                    };
+
+                    // Upload the file directly to blob storage with metadata
+                    await _storageService.UploadFromStreamAsync(ModuleContainer, blobPath, stream, metadata);
+
+                    return Ok(new { url = uploadUrl.ToString() });
+                }
             }
             else if (Request.ContentLength > 0)
             {
-                // Create metadata
-                var metadata = new Dictionary<string, string>
-                {
-                    { "namespace", @namespace },
-                    { "moduleName", module_name },
-                    { "version", version }
-                };
-
                 // Handle raw body upload
-                using var stream = Request.Body;
-                await _storageService.UploadFromStreamAsync(ModuleContainer, blobPath, stream, metadata);
+                using (var stream = Request.Body)
+                {
+                    var validationResult = await _moduleValidator.ValidateModuleArchiveAsync(stream);
+                    if (!validationResult.IsValid)
+                    {
+                        return Error(400, $"Invalid Terraform module structure: {string.Join(", ", validationResult.Errors)}");
+                    }
 
-                return Ok(new { message = $"Module {@namespace}/{module_name} version {version} uploaded successfully" });
+                    // Reset stream position for upload
+                    stream.Position = 0;
+
+                    // Create metadata
+                    var metadata = new Dictionary<string, string>
+                    {
+                        { "namespace", @namespace },
+                        { "moduleName", module_name },
+                        { "version", version }
+                    };
+
+                    await _storageService.UploadFromStreamAsync(ModuleContainer, blobPath, stream, metadata);
+
+                    return Ok(new { message = $"Module {@namespace}/{module_name} version {version} uploaded successfully" });
+                }
             }
 
             return Error(400, "No file provided");
