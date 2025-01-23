@@ -36,6 +36,71 @@ API_KEY=your_api_key
 APP_INSIGHT_KEY=your_app_insights_key #optional
 ```
 
+### 3. Run the Application
+
+Choose one of these methods to run the application:
+
+#### Using Docker (Recommended)
+
+```bash
+# Build the image
+docker build -t tfprivate-api .
+
+# Run with environment file
+docker run --env-file .env -p 80:80 -p 443:443 tfprivate-api
+```
+
+#### Using .NET directly
+
+```bash
+cd tfprivate.Api
+dotnet run
+```
+
+The API will be available at:
+
+- HTTP: http://localhost:80
+- HTTPS: https://localhost:443
+- Swagger UI (dev): https://localhost:443/swagger
+
+### 4. Using the Registry
+
+#### Upload a Module
+
+```bash
+# Create a module archive
+tar -czf my-module.tgz my-module/
+
+# Upload using curl
+curl -X POST \
+  -H "X-API-Key: your-api-key" \
+  -F "file=@my-module.tgz" \
+  https://localhost:443/v1/module/myorg/my-module/1.0.0
+```
+
+#### Reference in Terraform
+
+Add the module to your Terraform configuration:
+
+```hcl
+module "example" {
+  source  = "localhost:443/myorg/my-module/aws"
+  version = "1.0.0"
+
+  # Module inputs
+  name     = "example"
+  location = "westeurope"
+}
+```
+
+Configure authentication in `~/.terraformrc`:
+
+```hcl
+credentials "localhost:443" {
+  token = "your-api-key"
+}
+```
+
 ## API Endpoints
 
 ### List Modules
@@ -207,8 +272,7 @@ Add the registry to your Terraform configuration:
 
 ```hcl
 module "example" {
-  source  = "your-registry-url/acme/my_module/azure"
-  version = "1.0.0"
+  source  = "https://your-registry-url/v1/module/acme/my_module/1.0.0"
 }
 ```
 
