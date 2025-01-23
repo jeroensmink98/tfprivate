@@ -205,6 +205,20 @@ services:
       - .env
 ```
 
+4. Using docker-compose with Caddy reverse proxy (Recommended for production):
+
+The repository includes a `docker-compose.yml` and `Caddyfile` configuration that sets up the API behind a Caddy reverse proxy. This provides automatic HTTPS with Let's Encrypt certificates.
+
+```bash
+# Start the services
+docker compose up -d
+
+# View logs
+docker compose logs -f
+```
+
+The Caddy reverse proxy will automatically handle HTTPS certificates and forward requests to the API service. Make sure to update the domain in the `Caddyfile` to match your setup.
+
 ## Configuration
 
 ### Environment Variables
