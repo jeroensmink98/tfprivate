@@ -82,3 +82,5 @@ upload-module.sh
 !.env.example
 
 modules
+
+my_module
