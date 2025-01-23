@@ -140,10 +140,17 @@ public class ModuleRegistryController : ControllerBase
             }
 
             // Parse versions and find the latest one using semantic versioning
-            var latestVersion = versions
-                .Select(v => SemanticVersion.Parse(v))
-                .Max()
-                .ToString();
+            var latestVersion = versions?.Any() == true
+                ? versions
+                    .Select(v => SemanticVersion.Parse(v))
+                    .Max()
+                    .ToString()
+                : null;
+
+            if (latestVersion == null)
+            {
+                return Error(404, $"No versions found for module {@namespace}/{module_name}");
+            }
 
             // Get the download URL for the latest version
             var blobPath = $"{@namespace}/{module_name}/v{latestVersion}/module.tgz";
