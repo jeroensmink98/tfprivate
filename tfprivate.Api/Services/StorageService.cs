@@ -1,5 +1,6 @@
 using Azure.Storage;
 using Azure.Storage.Blobs;
+using Azure.Storage.Blobs.Models;
 using Azure.Storage.Sas;
 using System.Text.RegularExpressions;
 
@@ -15,6 +16,8 @@ public interface IStorageService
     Task<IEnumerable<string>> ListVersionsAsync(string containerName, string prefix);
     Task<IEnumerable<ModuleInfo>> ListModulesAsync(string containerName, string org);
     Task UploadFromStreamAsync(string containerName, string blobName, Stream content);
+    Task UploadFromStreamAsync(string containerName, string blobName, Stream content, IDictionary<string, string>? metadata);
+    Task SetBlobMetadataAsync(string containerName, string blobName, IDictionary<string, string> metadata);
 }
 
 public class StorageService : IStorageService
@@ -24,8 +27,19 @@ public class StorageService : IStorageService
 
     public StorageService(IConfiguration configuration)
     {
-        _connectionString = configuration["Azure:Storage:ConnectionString"]
-            ?? throw new ArgumentNullException("Storage connection string not configured");
+        // Try to get connection string from environment variables first
+        var accountName = Environment.GetEnvironmentVariable("STORAGE_ACCOUNTNAME");
+        var accountKey = Environment.GetEnvironmentVariable("STORAGE_ACCESS_KEY");
+
+        if (!string.IsNullOrEmpty(accountName) && !string.IsNullOrEmpty(accountKey))
+        {
+            _connectionString = $"DefaultEndpointsProtocol=https;AccountName={accountName};AccountKey={accountKey};EndpointSuffix=core.windows.net";
+        }
+        else
+        {
+            _connectionString = configuration["Azure:Storage:ConnectionString"]
+                ?? throw new ArgumentNullException("Storage connection string not configured");
+        }
 
         _blobServiceClient = new BlobServiceClient(_connectionString);
     }
@@ -132,10 +146,29 @@ public class StorageService : IStorageService
 
     public async Task UploadFromStreamAsync(string containerName, string blobName, Stream content)
     {
+        await UploadFromStreamAsync(containerName, blobName, content, null);
+    }
+
+    public async Task UploadFromStreamAsync(string containerName, string blobName, Stream content, IDictionary<string, string>? metadata)
+    {
         var container = _blobServiceClient.GetBlobContainerClient(containerName);
         await container.CreateIfNotExistsAsync();
 
         var blobClient = container.GetBlobClient(blobName);
-        await blobClient.UploadAsync(content, overwrite: false);
+
+        var options = new BlobUploadOptions();
+        if (metadata != null)
+        {
+            options.Metadata = metadata;
+        }
+
+        await blobClient.UploadAsync(content, options);
+    }
+
+    public async Task SetBlobMetadataAsync(string containerName, string blobName, IDictionary<string, string> metadata)
+    {
+        var container = _blobServiceClient.GetBlobContainerClient(containerName);
+        var blobClient = container.GetBlobClient(blobName);
+        await blobClient.SetMetadataAsync(metadata);
     }
 }

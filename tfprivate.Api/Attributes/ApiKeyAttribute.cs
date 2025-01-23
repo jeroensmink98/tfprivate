@@ -7,6 +7,7 @@ namespace tfprivate.Api.Attributes;
 public class ApiKeyAttribute : Attribute, IAsyncActionFilter
 {
     private const string ApiKeyHeaderName = "X-API-Key";
+    private const string ApiKeyEnvName = "API_KEY";
 
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
     {
@@ -19,8 +20,15 @@ public class ApiKeyAttribute : Attribute, IAsyncActionFilter
             return;
         }
 
-        var configuration = context.HttpContext.RequestServices.GetRequiredService<IConfiguration>();
-        var apiKey = configuration.GetValue<string>("ApiKey");
+        // Try to get API key from environment variable first
+        var apiKey = Environment.GetEnvironmentVariable(ApiKeyEnvName);
+
+        // If not found in environment, try configuration
+        if (string.IsNullOrEmpty(apiKey))
+        {
+            var configuration = context.HttpContext.RequestServices.GetRequiredService<IConfiguration>();
+            apiKey = configuration.GetValue<string>("ApiKey");
+        }
 
         if (string.IsNullOrEmpty(apiKey))
         {

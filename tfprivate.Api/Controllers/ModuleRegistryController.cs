@@ -2,7 +2,8 @@ using Microsoft.AspNetCore.Mvc;
 using tfprivate.Api.Services;
 using tfprivate.Api.Attributes;
 using System.ComponentModel.DataAnnotations;
-using Microsoft.OpenApi.Models;
+using NuGet.Versioning;
+using System.Collections.Generic;
 
 namespace tfprivate.Api.Controllers;
 
@@ -22,12 +23,12 @@ public class ModuleRegistryController : ControllerBase
     }
 
     [HttpGet]
-    [Route("api/v1/modules/{org}")]
-    public async Task<IActionResult> ListModules([FromRoute] string org)
+    [Route("v1/modules/{namespace}")]
+    public async Task<IActionResult> ListModules([FromRoute] string @namespace)
     {
         try
         {
-            var modules = await _storageService.ListModulesAsync(ModuleContainer, org);
+            var modules = await _storageService.ListModulesAsync(ModuleContainer, @namespace);
 
             return Ok(new
             {
@@ -35,7 +36,7 @@ public class ModuleRegistryController : ControllerBase
                 {
                     id = Guid.NewGuid(),
                     module = m,
-                    org = org
+                    @namespace = @namespace
                 }).ToArray()
             });
         }
@@ -45,24 +46,67 @@ public class ModuleRegistryController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Get a specific version or latest version of a module
+    /// </summary>
+    /// <param name="namespace">The namespace the module is owned by</param>
+    /// <param name="module_name">The name of the module</param>
+    /// <returns>Module download URL</returns>
     [HttpGet]
-    [Route("api/v1/module/{org}/{module}/{version}")]
+    [Route("v1/module/{namespace}/{module_name}")]
+    public async Task<IActionResult> GetLatestModule(
+        [FromRoute] string @namespace,
+        [FromRoute] string module_name)
+    {
+        try
+        {
+            var prefix = $"{@namespace}/{module_name}";
+            var versions = await _storageService.ListVersionsAsync(ModuleContainer, prefix);
+
+            if (!versions.Any())
+            {
+                return NotFound(new { errors = new[] { new { detail = $"Module {@namespace}/{module_name} not found" } } });
+            }
+
+            // Parse versions and find the latest one using semantic versioning
+            var latestVersion = versions
+                .Select(v => SemanticVersion.Parse(v))
+                .Max()
+                .ToString();
+
+            // Get the download URL for the latest version
+            var blobPath = $"{@namespace}/{module_name}/v{latestVersion}/module.tgz";
+            var url = await _storageService.GetDownloadUrlAsync(ModuleContainer, blobPath);
+
+            // Return URL in X-Terraform-Get header with 204 No Content
+            Response.Headers.Append("X-Terraform-Get", url.ToString());
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { errors = new[] { new { detail = ex.Message } } });
+        }
+    }
+
+    [HttpGet]
+    [Route("v1/module/{namespace}/{module_name}/{version}")]
     public async Task<IActionResult> GetModule(
-        [FromRoute] string org,
-        [FromRoute][Required] string @module,
+        [FromRoute] string @namespace,
+        [FromRoute][Required] string module_name,
         [FromRoute][Required][RegularExpression(@"^\d+\.\d+\.\d+$", ErrorMessage = "Version must be in semantic versioning format (e.g. 1.0.0)")] string version)
     {
         try
         {
-            var blobPath = $"{org}/{module}/v{version}/module.tgz";
+            var blobPath = $"{@namespace}/{module_name}/v{version}/module.tgz";
             var url = await _storageService.GetDownloadUrlAsync(ModuleContainer, blobPath);
 
-            // Return direct URL to the .tgz archive
-            return Content(url.ToString(), "text/plain");
+            // Return URL in X-Terraform-Get header with 204 No Content
+            Response.Headers.Append("X-Terraform-Get", url.ToString());
+            return NoContent();
         }
         catch (FileNotFoundException)
         {
-            return NotFound(new { errors = new[] { new { detail = $"Module {org}/{module} version {version} not found" } } });
+            return NotFound(new { errors = new[] { new { detail = $"Module {@namespace}/{module_name} version {version} not found" } } });
         }
         catch (Exception ex)
         {
@@ -73,8 +117,8 @@ public class ModuleRegistryController : ControllerBase
     /// <summary>
     /// Upload a new Terraform module version
     /// </summary>
-    /// <param name="org">Organization name</param>
-    /// <param name="module">Module name</param>
+    /// <param name="namespace">Namespace name</param>
+    /// <param name="module_name">Module name</param>
     /// <param name="version">Module version (semver)</param>
     /// <param name="file">The module .tgz file</param>
     /// <returns>Upload result with URL or error details</returns>
@@ -86,12 +130,12 @@ public class ModuleRegistryController : ControllerBase
     [HttpPost]
     [ApiKey]
     [Consumes("multipart/form-data")]
-    [Route("api/v1/module/{org}/{module}/{version}")]
+    [Route("v1/module/{namespace}/{module_name}/{version}")]
     [RequestSizeLimit(52428800)] // 50MB limit
     [RequestFormLimits(MultipartBodyLengthLimit = 52428800)]
     public async Task<IActionResult> UploadModule(
-        [FromRoute] string org,
-        [FromRoute][Required] string @module,
+        [FromRoute] string @namespace,
+        [FromRoute][Required] string module_name,
         [FromRoute][Required][RegularExpression(@"^\d+\.\d+\.\d+$", ErrorMessage = "Version must be in semantic versioning format (e.g. 1.0.0)")] string version,
         [FromForm] IFormFile file)
     {
@@ -102,13 +146,13 @@ public class ModuleRegistryController : ControllerBase
                 return BadRequest(new { errors = new[] { new { detail = "No file provided" } } });
             }
 
-            var blobPath = $"{org}/{module}/v{version}/module.tgz";
+            var blobPath = $"{@namespace}/{module_name}/v{version}/module.tgz";
 
             // Check if module already exists
             try
             {
                 await _storageService.GetDownloadUrlAsync(ModuleContainer, blobPath);
-                return Conflict(new { errors = new[] { new { detail = $"Module {org}/{module} version {version} already exists" } } });
+                return Conflict(new { errors = new[] { new { detail = $"Module {@namespace}/{module_name} version {version} already exists" } } });
             }
             catch (FileNotFoundException)
             {
@@ -126,22 +170,80 @@ public class ModuleRegistryController : ControllerBase
                 // Get upload URL
                 var uploadUrl = await _storageService.GetUploadUrlAsync(ModuleContainer, blobPath);
 
-                // Upload the file directly to blob storage
+                // Create metadata
+                var metadata = new Dictionary<string, string>
+                {
+                    { "namespace", @namespace },
+                    { "moduleName", module_name },
+                    { "version", version }
+                };
+
+                // Upload the file directly to blob storage with metadata
                 using var stream = file.OpenReadStream();
-                await _storageService.UploadFromStreamAsync(ModuleContainer, blobPath, stream);
+                await _storageService.UploadFromStreamAsync(ModuleContainer, blobPath, stream, metadata);
 
                 return Ok(new { url = uploadUrl.ToString() });
             }
             else if (Request.ContentLength > 0)
             {
+                // Create metadata
+                var metadata = new Dictionary<string, string>
+                {
+                    { "namespace", @namespace },
+                    { "moduleName", module_name },
+                    { "version", version }
+                };
+
                 // Handle raw body upload
                 using var stream = Request.Body;
-                await _storageService.UploadFromStreamAsync(ModuleContainer, blobPath, stream);
+                await _storageService.UploadFromStreamAsync(ModuleContainer, blobPath, stream, metadata);
 
-                return Ok(new { message = $"Module {org}/{module} version {version} uploaded successfully" });
+                return Ok(new { message = $"Module {@namespace}/{module_name} version {version} uploaded successfully" });
             }
 
             return BadRequest(new { errors = new[] { new { detail = "No file provided" } } });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { errors = new[] { new { detail = ex.Message } } });
+        }
+    }
+
+    /// <summary>
+    /// Lists available versions for a specific module
+    /// </summary>
+    /// <param name="namespace">The namespace the module is owned by</param>
+    /// <param name="module_name">The name of the module</param>
+    /// <returns>List of available versions for the module</returns>
+    /// <response code="200">List of available versions</response>
+    /// <response code="404">Module not found</response>
+    /// <response code="500">Server error</response>
+    [HttpGet]
+    [Route("v1/modules/{namespace}/{module_name}/versions")]
+    public async Task<IActionResult> ListModuleVersions(
+        [FromRoute] string @namespace,
+        [FromRoute] string module_name)
+    {
+        try
+        {
+            var prefix = $"{@namespace}/{module_name}";
+            var versions = await _storageService.ListVersionsAsync(ModuleContainer, prefix);
+
+            if (!versions.Any())
+            {
+                return NotFound(new { errors = new[] { new { detail = $"Module {@namespace}/{module_name} not found" } } });
+            }
+
+            return Ok(new
+            {
+                modules = new[]
+                {
+                    new
+                    {
+                        versions = versions.Select(v => new { version = v }).ToArray()
+                    }
+                }
+            });
         }
         catch (Exception ex)
         {
