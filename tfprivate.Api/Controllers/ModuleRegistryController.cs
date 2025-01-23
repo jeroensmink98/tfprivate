@@ -149,7 +149,7 @@ public class ModuleRegistryController : ControllerBase
             }
 
             // Parse versions and find the latest one using semantic versioning
-            var latestVersion = versions?.Any() == true
+            var latestVersion = versions != null && versions.Any()
                 ? versions
                     .Select(v => SemanticVersion.Parse(v))
                     .Max()
