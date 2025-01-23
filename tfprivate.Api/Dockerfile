@@ -23,10 +23,9 @@ RUN mkdir -p /root/.aspnet/https/
 EXPOSE 443
 
 # Set environment variables
-ENV ASPNETCORE_URLS=https://+:443
+ENV ASPNETCORE_URLS=http://+:80
 ENV ASPNETCORE_ENVIRONMENT=Production
-ENV ASPNETCORE_Kestrel__Certificates__Default__Path=/root/.aspnet/https/aspnetapp.pfx
-ENV ASPNETCORE_Kestrel__Certificates__Default__Password=SecurePassword123
+
 
 # Note: Sensitive environment variables should be provided at runtime:
 # - STORAGE_ACCOUNTNAME

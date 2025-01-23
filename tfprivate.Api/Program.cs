@@ -80,16 +80,27 @@ if (isAppInsightsEnabled)
 // Configure Kestrel
 builder.Services.Configure<Microsoft.AspNetCore.Server.Kestrel.Core.KestrelServerOptions>(options =>
 {
-    if (builder.Environment.IsProduction())
+    // Check if we're running in a container
+    var isContainer = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER"));
+
+    if (builder.Environment.IsProduction() && !isContainer)
     {
-        // In production, listen on both HTTP and HTTPS
+        // In production (but not in container), listen on both HTTP and HTTPS
         options.ListenAnyIP(443, listenOptions =>
         {
             listenOptions.UseHttps();
         });
     }
-    // Always listen on HTTP
-    options.ListenAnyIP(80);
+    else if (isContainer)
+    {
+        // In container, just listen on HTTP as we're behind a reverse proxy
+        options.ListenAnyIP(80);
+    }
+    else
+    {
+        // In development, listen on port from launchSettings.json
+        options.ListenAnyIP(5680);
+    }
 });
 
 builder.Services.AddSingleton<IStorageService, StorageService>();
