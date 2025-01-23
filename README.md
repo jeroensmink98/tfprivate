@@ -164,7 +164,7 @@ Create a `.env` file with the following content (add to .gitignore):
 STORAGE_ACCOUNTNAME=your_account_name
 STORAGE_ACCESS_KEY=your_access_key
 API_KEY=your_api_key
-APP_INSIGHT_KEY=your_app_insights_key (optional)
+APP_INSIGHT_KEY=your_app_insights_key #optional
 ```
 
 ## Using with Terraform
