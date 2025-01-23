@@ -9,6 +9,7 @@ A private registry API for hosting and managing Terraform modules. This API impl
 - Secure API key authentication
 - Azure Blob Storage backend
 - Docker support
+- Optional Application Insights monitoring
 
 ## API Endpoints
 
@@ -89,6 +90,15 @@ GET /v1/modules/acme/my_module/versions
 
 All write operations require an API key to be provided in the `X-API-Key` header.
 
+## Application Insights
+
+The API supports Azure Application Insights monitoring. You can enable it by either:
+
+1. Setting the connection string in `appsettings.json` under `Azure:AzureMonitor:ConnectionString`
+2. Setting the environment variable `APP_INSIGHT_KEY` with your Application Insights connection string
+
+If neither is provided, Application Insights monitoring will be disabled.
+
 ## Docker Setup
 
 ### Building the Image
@@ -108,8 +118,11 @@ docker run -p 80:80 -p 443:443 \
   -e STORAGE_ACCOUNTNAME=your_account_name \
   -e STORAGE_ACCESS_KEY=your_access_key \
   -e API_KEY=your_api_key \
+  -e APP_INSIGHT_KEY=your_app_insights_key \
   tfprivate-api
 ```
+
+The `API_KEY` will be used to secure the POST request to upload a module.
 
 2. Using an environment file:
 
@@ -140,6 +153,7 @@ services:
 | STORAGE_ACCOUNTNAME    | Azure Storage account name                   | Yes      |
 | STORAGE_ACCESS_KEY     | Azure Storage access key                     | Yes      |
 | API_KEY                | API key for authentication                   | Yes      |
+| APP_INSIGHT_KEY        | Application Insights connection string       | No       |
 | ASPNETCORE_ENVIRONMENT | Runtime environment (defaults to Production) | No       |
 
 ### Environment File (.env)
@@ -150,6 +164,7 @@ Create a `.env` file with the following content (add to .gitignore):
 STORAGE_ACCOUNTNAME=your_account_name
 STORAGE_ACCESS_KEY=your_access_key
 API_KEY=your_api_key
+APP_INSIGHT_KEY=your_app_insights_key
 ```
 
 ## Development Setup

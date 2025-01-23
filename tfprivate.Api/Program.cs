@@ -12,69 +12,98 @@ builder.Configuration.SetBasePath(builder.Environment.ContentRootPath)
 
 // Add services to the container.
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(c =>
+
+// Only add Swagger in non-production environments
+if (!builder.Environment.IsProduction())
 {
-    c.SwaggerDoc("v1", new OpenApiInfo
+    builder.Services.AddSwaggerGen(c =>
     {
-        Title = "Terraform Private Registry API",
-        Version = "v1",
-        Description = "API for managing private Terraform modules"
-    });
-
-    // Add API Key security definition
-    c.AddSecurityDefinition("ApiKey", new OpenApiSecurityScheme
-    {
-        Type = SecuritySchemeType.ApiKey,
-        In = ParameterLocation.Header,
-        Name = "X-API-Key",
-        Description = "API Key authentication. Example: 'X-API-Key: your-api-key-here'"
-    });
-
-    // Add global security requirement
-    c.AddSecurityRequirement(new OpenApiSecurityRequirement
-    {
+        c.SwaggerDoc("v1", new OpenApiInfo
         {
-            new OpenApiSecurityScheme
-            {
-                Reference = new OpenApiReference
-                {
-                    Type = ReferenceType.SecurityScheme,
-                    Id = "ApiKey"
-                }
-            },
-            Array.Empty<string>()
-        }
-    });
+            Title = "Terraform Private Registry API",
+            Version = "v1",
+            Description = "API for managing private Terraform modules"
+        });
 
-    // Configure Swagger to handle file uploads
-    c.MapType<IFormFile>(() => new OpenApiSchema
-    {
-        Type = "string",
-        Format = "binary"
+        // Add API Key security definition
+        c.AddSecurityDefinition("ApiKey", new OpenApiSecurityScheme
+        {
+            Type = SecuritySchemeType.ApiKey,
+            In = ParameterLocation.Header,
+            Name = "X-API-Key",
+            Description = "API Key authentication. Example: 'X-API-Key: your-api-key-here'"
+        });
+
+        // Add global security requirement
+        c.AddSecurityRequirement(new OpenApiSecurityRequirement
+        {
+            {
+                new OpenApiSecurityScheme
+                {
+                    Reference = new OpenApiReference
+                    {
+                        Type = ReferenceType.SecurityScheme,
+                        Id = "ApiKey"
+                    }
+                },
+                Array.Empty<string>()
+            }
+        });
+
+        // Configure Swagger to handle file uploads
+        c.MapType<IFormFile>(() => new OpenApiSchema
+        {
+            Type = "string",
+            Format = "binary"
+        });
     });
-});
+}
 
 builder.Services.AddControllers();
 
-// Add Application Insights
-builder.Services.AddOpenTelemetry().UseAzureMonitor(options =>
-{
-    options.ConnectionString = builder.Configuration.GetSection("Azure:AzureMonitor:ConnectionString").Value;
-});
+// Add Application Insights if connection string is available
+var appInsightsConnectionString = builder.Configuration.GetSection("Azure:AzureMonitor:ConnectionString").Value;
+var envAppInsightsKey = Environment.GetEnvironmentVariable("APP_INSIGHT_KEY");
+var isAppInsightsEnabled = !string.IsNullOrEmpty(appInsightsConnectionString) || !string.IsNullOrEmpty(envAppInsightsKey);
 
-// Add HTTPS configuration
-builder.Services.AddHttpsRedirection(options =>
+if (isAppInsightsEnabled)
 {
-    options.RedirectStatusCode = StatusCodes.Status307TemporaryRedirect;
-    options.HttpsPort = 7056;
+    builder.Services.AddOpenTelemetry().UseAzureMonitor(options =>
+    {
+        options.ConnectionString = !string.IsNullOrEmpty(appInsightsConnectionString)
+            ? appInsightsConnectionString
+            : envAppInsightsKey;
+    });
+}
+
+// Configure Kestrel
+builder.Services.Configure<Microsoft.AspNetCore.Server.Kestrel.Core.KestrelServerOptions>(options =>
+{
+    // Listen on port 443 for HTTPS
+    options.ListenAnyIP(443, listenOptions =>
+    {
+        listenOptions.UseHttps();
+    });
+    // Also listen on port 80 for HTTP
+    options.ListenAnyIP(80);
 });
 
 builder.Services.AddSingleton<IStorageService, StorageService>();
 
 var app = builder.Build();
 
+// Log startup information
+var logger = app.Services.GetRequiredService<ILogger<Program>>();
+logger.LogInformation("Application Insights is {Status}", isAppInsightsEnabled ? "enabled" : "disabled");
+
+var containerName = Environment.GetEnvironmentVariable("HOSTNAME");
+if (!string.IsNullOrEmpty(containerName))
+{
+    logger.LogInformation("Running in container: {ContainerName}", containerName);
+}
+
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+if (!app.Environment.IsProduction())
 {
     app.UseSwagger();
     app.UseSwaggerUI(c =>
@@ -83,7 +112,6 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-app.UseHttpsRedirection();
 app.MapControllers();
 
 app.Run();

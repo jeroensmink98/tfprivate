@@ -16,13 +16,17 @@ FROM mcr.microsoft.com/dotnet/aspnet:9.0-preview
 WORKDIR /app
 COPY --from=build /app/publish .
 
-# Expose ports
-EXPOSE 80
+# Create directory for the certificate
+RUN mkdir -p /root/.aspnet/https/
+
+# Expose only HTTPS port
 EXPOSE 443
 
 # Set environment variables
-ENV ASPNETCORE_URLS=http://+:80;https://+:443
+ENV ASPNETCORE_URLS=https://+:443
 ENV ASPNETCORE_ENVIRONMENT=Production
+ENV ASPNETCORE_Kestrel__Certificates__Default__Path=/root/.aspnet/https/aspnetapp.pfx
+ENV ASPNETCORE_Kestrel__Certificates__Default__Password=SecurePassword123
 
 # Note: Sensitive environment variables should be provided at runtime:
 # - STORAGE_ACCOUNTNAME

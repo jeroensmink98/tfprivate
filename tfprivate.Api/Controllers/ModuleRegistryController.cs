@@ -4,6 +4,7 @@ using tfprivate.Api.Attributes;
 using System.ComponentModel.DataAnnotations;
 using NuGet.Versioning;
 using System.Collections.Generic;
+using Microsoft.Extensions.Hosting;
 
 namespace tfprivate.Api.Controllers;
 
@@ -22,27 +23,97 @@ public class ModuleRegistryController : ControllerBase
         _storageService = storageService;
     }
 
+    private IActionResult Error(int statusCode, string message)
+    {
+        return StatusCode(statusCode, new { errors = new[] { message } });
+    }
+
+    /// <summary>
+    /// Lists all available API endpoints
+    /// </summary>
+    [HttpGet]
+    [Route("/")]
+    [Route("/v1")]
+    public IActionResult Index()
+    {
+        var endpoints = new[]
+        {
+            new { method = "GET", path = "/v1/modules/{namespace}", description = "List all modules in a namespace" },
+            new { method = "GET", path = "/v1/module/{namespace}/{module_name}", description = "Get latest version of a module" },
+            new { method = "GET", path = "/v1/module/{namespace}/{module_name}/{version}", description = "Get specific version of a module" },
+            new { method = "POST", path = "/v1/module/{namespace}/{module_name}/{version}", description = "Upload a new module version" },
+            new { method = "GET", path = "/v1/modules/{namespace}/{module_name}/versions", description = "List all versions of a module" }
+        };
+
+        var response = new
+        {
+            name = "Terraform Private Registry API",
+            version = "v1",
+            endpoints = endpoints
+        };
+
+        // Only add documentation link in non-production environments
+        if (!HttpContext.RequestServices.GetRequiredService<IWebHostEnvironment>().IsProduction())
+        {
+            return Ok(new
+            {
+                name = response.name,
+                version = response.version,
+                endpoints = response.endpoints,
+                documentation = "/swagger"
+            });
+        }
+
+        return Ok(response);
+    }
+
     [HttpGet]
     [Route("v1/modules/{namespace}")]
-    public async Task<IActionResult> ListModules([FromRoute] string @namespace)
+    public async Task<IActionResult> ListModules(
+        [FromRoute] string @namespace,
+        [FromQuery] int limit = 15,
+        [FromQuery] int offset = 0)
     {
         try
         {
             var modules = await _storageService.ListModulesAsync(ModuleContainer, @namespace);
 
+            // Apply pagination
+            var totalCount = modules.Count();
+            var hasMore = offset + limit < totalCount;
+            modules = modules.Skip(offset).Take(limit).ToList();
+
             return Ok(new
             {
+                meta = new
+                {
+                    limit = limit,
+                    current_offset = offset,
+                    next_offset = hasMore ? offset + limit : (int?)null,
+                    next_url = hasMore ? $"/v1/modules/{@namespace}?limit={limit}&offset={offset + limit}" : null,
+                    prev_offset = offset > 0 ? Math.Max(0, offset - limit) : (int?)null
+                },
                 modules = modules.Select(m => new
                 {
-                    id = Guid.NewGuid(),
-                    module = m,
-                    @namespace = @namespace
+                    id = $"{@namespace}/{m.Name}/{m.Version}",
+                    owner = "",  // We don't track this currently
+                    @namespace = @namespace,
+                    name = m.Name,
+                    version = m.Version,
+                    description = m.Description ?? "",
+                    source = m.Source ?? "",
+                    published_at = m.PublishedAt.ToString("yyyy-MM-ddTHH:mm:ss.ffffffZ"),
+                    verified = false  // We don't support verified modules currently
                 }).ToArray()
             });
         }
         catch (Exception ex)
         {
-            return StatusCode(500, new { errors = new[] { new { detail = ex.Message } } });
+            if (ex is OperationCanceledException)
+            {
+                return Error(503, "Service is currently under load, please retry later");
+            }
+            return Error(500, ex.Message);
         }
     }
 
@@ -65,7 +136,7 @@ public class ModuleRegistryController : ControllerBase
 
             if (!versions.Any())
             {
-                return NotFound(new { errors = new[] { new { detail = $"Module {@namespace}/{module_name} not found" } } });
+                return Error(404, $"Module {@namespace}/{module_name} not found");
             }
 
             // Parse versions and find the latest one using semantic versioning
@@ -84,7 +155,11 @@ public class ModuleRegistryController : ControllerBase
         }
         catch (Exception ex)
         {
-            return StatusCode(500, new { errors = new[] { new { detail = ex.Message } } });
+            if (ex is OperationCanceledException)
+            {
+                return Error(503, "Service is currently under load, please retry later");
+            }
+            return Error(500, ex.Message);
         }
     }
 
@@ -106,11 +181,15 @@ public class ModuleRegistryController : ControllerBase
         }
         catch (FileNotFoundException)
         {
-            return NotFound(new { errors = new[] { new { detail = $"Module {@namespace}/{module_name} version {version} not found" } } });
+            return Error(404, $"Module {@namespace}/{module_name} version {version} not found");
         }
         catch (Exception ex)
         {
-            return StatusCode(500, new { errors = new[] { new { detail = ex.Message } } });
+            if (ex is OperationCanceledException)
+            {
+                return Error(503, "Service is currently under load, please retry later");
+            }
+            return Error(500, ex.Message);
         }
     }
 
@@ -143,7 +222,7 @@ public class ModuleRegistryController : ControllerBase
         {
             if (file == null)
             {
-                return BadRequest(new { errors = new[] { new { detail = "No file provided" } } });
+                return Error(400, "No file provided");
             }
 
             var blobPath = $"{@namespace}/{module_name}/v{version}/module.tgz";
@@ -152,7 +231,7 @@ public class ModuleRegistryController : ControllerBase
             try
             {
                 await _storageService.GetDownloadUrlAsync(ModuleContainer, blobPath);
-                return Conflict(new { errors = new[] { new { detail = $"Module {@namespace}/{module_name} version {version} already exists" } } });
+                return Error(409, $"Module {@namespace}/{module_name} version {version} already exists");
             }
             catch (FileNotFoundException)
             {
@@ -164,7 +243,7 @@ public class ModuleRegistryController : ControllerBase
                 // Handle form file upload
                 if (!file.FileName.EndsWith(".tgz", StringComparison.OrdinalIgnoreCase))
                 {
-                    return BadRequest(new { errors = new[] { new { detail = "File must be a .tgz archive" } } });
+                    return Error(400, "File must be a .tgz archive");
                 }
 
                 // Get upload URL
@@ -201,11 +280,15 @@ public class ModuleRegistryController : ControllerBase
                 return Ok(new { message = $"Module {@namespace}/{module_name} version {version} uploaded successfully" });
             }
 
-            return BadRequest(new { errors = new[] { new { detail = "No file provided" } } });
+            return Error(400, "No file provided");
         }
         catch (Exception ex)
         {
-            return StatusCode(500, new { errors = new[] { new { detail = ex.Message } } });
+            if (ex is OperationCanceledException)
+            {
+                return Error(503, "Service is currently under load, please retry later");
+            }
+            return Error(500, ex.Message);
         }
     }
 
@@ -231,7 +314,7 @@ public class ModuleRegistryController : ControllerBase
 
             if (!versions.Any())
             {
-                return NotFound(new { errors = new[] { new { detail = $"Module {@namespace}/{module_name} not found" } } });
+                return Error(404, $"Module {@namespace}/{module_name} not found");
             }
 
             return Ok(new
@@ -247,7 +330,11 @@ public class ModuleRegistryController : ControllerBase
         }
         catch (Exception ex)
         {
-            return StatusCode(500, new { errors = new[] { new { detail = ex.Message } } });
+            if (ex is OperationCanceledException)
+            {
+                return Error(503, "Service is currently under load, please retry later");
+            }
+            return Error(500, ex.Message);
         }
     }
 }

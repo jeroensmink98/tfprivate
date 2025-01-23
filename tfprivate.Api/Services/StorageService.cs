@@ -3,10 +3,17 @@ using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Azure.Storage.Sas;
 using System.Text.RegularExpressions;
+using NuGet.Versioning;
 
 namespace tfprivate.Api.Services;
 
-public record ModuleInfo(string Name, Uri DownloadUrl);
+public record ModuleInfo(
+    string Name,
+    string Version,
+    string Description,
+    string Source,
+    DateTimeOffset PublishedAt,
+    Uri DownloadUrl);
 
 public interface IStorageService
 {
@@ -119,11 +126,10 @@ public class StorageService : IStorageService
     public async Task<IEnumerable<ModuleInfo>> ListModulesAsync(string containerName, string org)
     {
         var container = _blobServiceClient.GetBlobContainerClient(containerName);
-
-        // Create container if it doesn't exist
         await container.CreateIfNotExistsAsync();
 
         var modules = new List<ModuleInfo>();
+        var moduleVersions = new Dictionary<string, ModuleInfo>();
 
         try
         {
@@ -131,17 +137,57 @@ public class StorageService : IStorageService
             {
                 if (blob.Name.EndsWith(".tgz", StringComparison.OrdinalIgnoreCase))
                 {
-                    var downloadUrl = await GetDownloadUrlAsync(containerName, blob.Name, TimeSpan.FromMinutes(5));
-                    modules.Add(new ModuleInfo(blob.Name, downloadUrl));
+                    // Parse module info from blob path
+                    // Expected format: org/module_name/v1.0.0/module.tgz
+                    var parts = blob.Name.Split('/');
+                    if (parts.Length >= 4)  // Changed from 5 to 4 since we removed provider
+                    {
+                        var moduleName = parts[1];
+                        var version = parts[2].TrimStart('v');  // Remove 'v' prefix if present
+
+                        // Get blob properties to access metadata and creation time
+                        var blobClient = container.GetBlobClient(blob.Name);
+                        var properties = await blobClient.GetPropertiesAsync();
+
+                        string description = "", source = "";
+
+                        properties.Value.Metadata.TryGetValue("description", out var descVal);
+                        description = descVal ?? "";
+
+                        properties.Value.Metadata.TryGetValue("source", out var sourceVal);
+                        source = sourceVal ?? "";
+
+                        var publishedAt = properties.Value.CreatedOn;
+                        var downloadUrl = await GetDownloadUrlAsync(containerName, blob.Name, TimeSpan.FromMinutes(5));
+
+                        var moduleInfo = new ModuleInfo(
+                            moduleName,
+                            version,
+                            description,
+                            source,
+                            publishedAt,
+                            downloadUrl
+                        );
+
+                        // Keep only the latest version of each module
+                        var key = moduleName;
+                        if (!moduleVersions.ContainsKey(key) ||
+                            SemanticVersion.Parse(version) > SemanticVersion.Parse(moduleVersions[key].Version))
+                        {
+                            moduleVersions[key] = moduleInfo;
+                        }
+                    }
                 }
             }
 
-            return modules.OrderBy(m => m.Name);
+            modules.AddRange(moduleVersions.Values);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            throw new InvalidOperationException($"Failed to list modules in container {containerName}: {ex.Message}", ex);
+            throw;
         }
+
+        return modules;
     }
 
     public async Task UploadFromStreamAsync(string containerName, string blobName, Stream content)
