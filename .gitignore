@@ -76,3 +76,7 @@ querydb*.json
 
 run-container.sh
 upload-module.sh
+
+.env
+*.env
+!.env.example
