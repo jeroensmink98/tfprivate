@@ -1,4 +1,5 @@
-Terraform Private Registry API
+# Terraform Private Registry API
+
 A self-hosted, open source Terraform registry API that implements the Terraform Registry Protocol for hosting and managing private modules. Inspired by the lack of a straightforward solution to self-host a private registry, this project aims to provide a simple, configurable alternative that runs on your own infrastructure.
 
 ```mermaid
@@ -23,7 +24,7 @@ Table of Contents
 - [Using with Terraform](#using-with-terraform)
 - [Module Structure Requirements](#module-structure-requirements)
 
-Features
+## Features
 
 - Host private Terraform modules behind a simple API
 - Azure Blob Storage backend for module binaries
@@ -32,16 +33,17 @@ Features
 - Optional Application Insights support
 - Docker support
 
-Getting Started
+## Getting Started
 
-Azure Storage Setup
+### Azure Storage Setup
 
 1. Create an Azure Storage Account in your Azure subscription.
 2. Locate the storage account name and primary access key under the "Access keys" section.
-3. These values will be used for STORAGE_ACCOUNTNAME and STORAGE_ACCESS_KEY in your application configuration.
+3. These values will be used for `STORAGE_ACCOUNTNAME` and `STORAGE_ACCESS_KEY` in your application configuration.
 
-Application Configuration
-Create a .env file in the root of your project (and add it to .gitignore). For example:
+### Application Configuration
+
+Create a `.env` file in the root of your project (and add it to `.gitignore`). For example:
 
 ```
 STORAGE_ACCOUNTNAME=your_account_name
@@ -50,11 +52,13 @@ API_KEY=your_api_key
 APP_INSIGHT_KEY=your_app_insights_key  # optional
 ```
 
-Run the Application
+### Run the Application
+
 You can run this API in multiple ways:
 
-• Docker (Recommended)  
- Build the image:
+#### Docker (Recommended)
+
+Build the image:
 
 ```
 docker build -t tfprivate-api .
@@ -73,9 +77,9 @@ cd tfprivate.Api
 dotnet run
 ```
 
-The API will be served on http://localhost:80 or https://localhost:443 (depending on your configuration). A Swagger UI is also available at https://localhost:443/swagger in development.
+The API will be served on `http://localhost:80` or `https://localhost:443` (depending on your configuration). A Swagger UI is also available at `https://localhost:443/swagger` in development.
 
-Upload and Use a Module
+### Upload and Use a Module
 
 1. Create a compressed tar archive of your module:
    ```
@@ -101,21 +105,21 @@ Upload and Use a Module
    }
    ```
 
-API Endpoints
+## API Endpoints
 
-- GET /v1/modules/{namespace}  
+- GET `/v1/modules/{namespace}`  
   Lists all modules in a given namespace.  
-  Example: /v1/modules/acme
+  Example: `/v1/modules/acme`
 
-- GET /v1/module/{namespace}/{module_name}  
+- GET `/v1/module/{namespace}/{module_name}`  
   Returns the latest version’s download URL for the specified module.  
-  Example: /v1/module/acme/my_module
+  Example: `/v1/module/acme/my_module`
 
-- GET /v1/module/{namespace}/{module_name}/{version}  
+- GET `/v1/module/{namespace}/{module_name}/{version}`  
   Returns the download URL for a specific version of a module.  
-  Example: /v1/module/acme/my_module/1.0.0
+  Example: `/v1/module/acme/my_module/1.0.0`
 
-- POST /v1/module/{namespace}/{module_name}/{version}  
+- POST `/v1/module/{namespace}/{module_name}/{version}`  
   Uploads a new module version (requires API key).  
   Example:
 
@@ -130,21 +134,23 @@ API Endpoints
   Lists all available versions of a module.  
   Example: /v1/modules/acme/my_module/versions
 
-Authentication
+## Authentication
+
 All write operations require an API key via the X-API-Key header. You can generate one with a command like:
 
 ```
 openssl rand -base64 32
 ```
 
-Application Insights
+## Application Insights
+
 Optionally, you can enable Azure Application Insights by providing its connection string.  
-• Use the environment variable APP_INSIGHT_KEY  
-• Or configure Azure:AzureMonitor:ConnectionString in appsettings.json
+• Use the environment variable `APP_INSIGHT_KEY`  
+• Or configure Azure:AzureMonitor:ConnectionString in `appsettings.json`
 
 If neither is provided, telemetry will be disabled.
 
-Docker Setup
+## Docker Setup
 
 1. Build the Docker image:
    ```
