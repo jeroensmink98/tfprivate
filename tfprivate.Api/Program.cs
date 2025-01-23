@@ -12,6 +12,7 @@ builder.Configuration.SetBasePath(builder.Environment.ContentRootPath)
 
 // Add services to the container.
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSingleton<ILoggingService, LoggingService>();
 
 // Only add Swagger in non-production environments
 if (!builder.Environment.IsProduction())

@@ -17,12 +17,17 @@ public class ModuleRegistryController : ControllerBase
 {
     private readonly IStorageService _storageService;
     private readonly ITerraformModuleValidator _moduleValidator;
+    private readonly ILoggingService _loggingService;
     private const string ModuleContainer = "modules";
 
-    public ModuleRegistryController(IStorageService storageService, ITerraformModuleValidator moduleValidator)
+    public ModuleRegistryController(
+        IStorageService storageService,
+        ITerraformModuleValidator moduleValidator,
+        ILoggingService loggingService)
     {
-        _storageService = storageService;
-        _moduleValidator = moduleValidator;
+        _storageService = storageService ?? throw new ArgumentNullException(nameof(storageService));
+        _moduleValidator = moduleValidator ?? throw new ArgumentNullException(nameof(moduleValidator));
+        _loggingService = loggingService ?? throw new ArgumentNullException(nameof(loggingService));
     }
 
     private IActionResult Error(int statusCode, string message)
@@ -76,6 +81,7 @@ public class ModuleRegistryController : ControllerBase
         [FromQuery] int limit = 15,
         [FromQuery] int offset = 0)
     {
+        _loggingService.LogApiRoute(HttpMethods.Get, $"/v1/modules/{@namespace}");
         try
         {
             var modules = await _storageService.ListModulesAsync(ModuleContainer, @namespace);
@@ -131,6 +137,7 @@ public class ModuleRegistryController : ControllerBase
         [FromRoute] string @namespace,
         [FromRoute] string module_name)
     {
+        _loggingService.LogApiRoute(HttpMethods.Get, $"/v1/module/{@namespace}/{module_name}");
         try
         {
             var prefix = $"{@namespace}/{module_name}";
@@ -160,6 +167,8 @@ public class ModuleRegistryController : ControllerBase
 
             // Return URL in X-Terraform-Get header with 204 No Content
             Response.Headers.Append("X-Terraform-Get", url.ToString());
+
+            _loggingService.LogModuleDownload(@namespace, module_name, latestVersion);
             return NoContent();
         }
         catch (Exception ex)
@@ -179,6 +188,7 @@ public class ModuleRegistryController : ControllerBase
         [FromRoute][Required] string module_name,
         [FromRoute][Required][RegularExpression(@"^\d+\.\d+\.\d+$", ErrorMessage = "Version must be in semantic versioning format (e.g. 1.0.0)")] string version)
     {
+        _loggingService.LogApiRoute(HttpMethods.Get, $"/v1/module/{@namespace}/{module_name}/{version}");
         try
         {
             var blobPath = $"{@namespace}/{module_name}/v{version}/module.tgz";
@@ -186,6 +196,8 @@ public class ModuleRegistryController : ControllerBase
 
             // Return URL in X-Terraform-Get header with 204 No Content
             Response.Headers.Append("X-Terraform-Get", url.ToString());
+
+            _loggingService.LogModuleDownload(@namespace, module_name, version);
             return NoContent();
         }
         catch (FileNotFoundException)
@@ -227,6 +239,7 @@ public class ModuleRegistryController : ControllerBase
         [FromRoute][Required][RegularExpression(@"^\d+\.\d+\.\d+$", ErrorMessage = "Version must be in semantic versioning format (e.g. 1.0.0)")] string version,
         [FromForm] IFormFile file)
     {
+        _loggingService.LogApiRoute(HttpMethods.Post, $"/v1/module/{@namespace}/{module_name}/{version}");
         try
         {
             if (file == null)
@@ -252,6 +265,7 @@ public class ModuleRegistryController : ControllerBase
                 // Handle form file upload
                 if (!file.FileName.EndsWith(".tgz", StringComparison.OrdinalIgnoreCase))
                 {
+                    _loggingService.LogModuleUpload(@namespace, module_name, version, false, "File must be a .tgz archive");
                     return Error(400, "File must be a .tgz archive");
                 }
 
@@ -259,8 +273,11 @@ public class ModuleRegistryController : ControllerBase
                 using (var stream = file.OpenReadStream())
                 {
                     var validationResult = await _moduleValidator.ValidateModuleArchiveAsync(stream);
+                    _loggingService.LogModuleValidation(@namespace, module_name, version, validationResult.IsValid, validationResult.Errors);
+
                     if (!validationResult.IsValid)
                     {
+                        _loggingService.LogModuleUpload(@namespace, module_name, version, false, string.Join(", ", validationResult.Errors));
                         return Error(400, $"Invalid Terraform module structure: {string.Join(", ", validationResult.Errors)}");
                     }
 
@@ -281,6 +298,7 @@ public class ModuleRegistryController : ControllerBase
                     // Upload the file directly to blob storage with metadata
                     await _storageService.UploadFromStreamAsync(ModuleContainer, blobPath, stream, metadata);
 
+                    _loggingService.LogModuleUpload(@namespace, module_name, version, true);
                     return Ok(new { url = uploadUrl.ToString() });
                 }
             }
@@ -290,8 +308,11 @@ public class ModuleRegistryController : ControllerBase
                 using (var stream = Request.Body)
                 {
                     var validationResult = await _moduleValidator.ValidateModuleArchiveAsync(stream);
+                    _loggingService.LogModuleValidation(@namespace, module_name, version, validationResult.IsValid, validationResult.Errors);
+
                     if (!validationResult.IsValid)
                     {
+                        _loggingService.LogModuleUpload(@namespace, module_name, version, false, string.Join(", ", validationResult.Errors));
                         return Error(400, $"Invalid Terraform module structure: {string.Join(", ", validationResult.Errors)}");
                     }
 
@@ -308,14 +329,17 @@ public class ModuleRegistryController : ControllerBase
 
                     await _storageService.UploadFromStreamAsync(ModuleContainer, blobPath, stream, metadata);
 
+                    _loggingService.LogModuleUpload(@namespace, module_name, version, true);
                     return Ok(new { message = $"Module {@namespace}/{module_name} version {version} uploaded successfully" });
                 }
             }
 
+            _loggingService.LogModuleUpload(@namespace, module_name, version, false, "No file provided");
             return Error(400, "No file provided");
         }
         catch (Exception ex)
         {
+            _loggingService.LogModuleUpload(@namespace, module_name, version, false, ex.Message);
             if (ex is OperationCanceledException)
             {
                 return Error(503, "Service is currently under load, please retry later");
@@ -339,6 +363,7 @@ public class ModuleRegistryController : ControllerBase
         [FromRoute] string @namespace,
         [FromRoute] string module_name)
     {
+        _loggingService.LogApiRoute(HttpMethods.Get, $"/v1/modules/{@namespace}/{module_name}/versions");
         try
         {
             var prefix = $"{@namespace}/{module_name}";

@@ -37,31 +37,53 @@ public class TerraformModuleValidator : ITerraformModuleValidator
             Directory.CreateDirectory(tempPath);
             await ExtractTgzArchive(archiveStream, tempPath);
 
-            // Get all files in the root directory
-            var rootFiles = Directory.GetFiles(tempPath)
-                .Select(f => Path.GetFileName(f))
+            // Get all files in the root directory and immediate subdirectories
+            var allFiles = Directory.GetFiles(tempPath, "*", SearchOption.AllDirectories)
+                .Select(f => new FileInfo(f))
                 .ToList();
 
-            result.FoundFiles = rootFiles;
+            // Group files by directory
+            var filesByDirectory = allFiles
+                .GroupBy(f => f.DirectoryName ?? tempPath)
+                .ToDictionary(g => g.Key, g => g.Select(f => f.Name).ToList());
+
+            // Find the directory that contains the most required files
+            var validDirectories = filesByDirectory
+                .Where(kvp => HasRequiredFiles(kvp.Value))
+                .ToList();
+
+            if (!validDirectories.Any())
+            {
+                result.Errors.Add("No valid Terraform module structure found in the archive");
+                result.IsValid = false;
+                return result;
+            }
+
+            // If we have multiple valid directories, prefer the root directory if it's valid
+            var moduleFiles = validDirectories
+                .FirstOrDefault(d => d.Key.Equals(tempPath, StringComparison.OrdinalIgnoreCase))
+                .Value ?? validDirectories.First().Value;
+
+            result.FoundFiles = moduleFiles;
 
             // Check required files
             foreach (var requiredFile in _requiredFiles)
             {
-                if (!rootFiles.Any(f => f.Equals(requiredFile, StringComparison.OrdinalIgnoreCase)))
+                if (!moduleFiles.Any(f => f.Equals(requiredFile, StringComparison.OrdinalIgnoreCase)))
                 {
-                    result.Errors.Add($"Required file '{requiredFile}' is missing from the root directory");
+                    result.Errors.Add($"Required file '{requiredFile}' is missing");
                 }
             }
 
             // Check if at least one variables file exists
-            if (!rootFiles.Any(f => f.Equals("variables.tf", StringComparison.OrdinalIgnoreCase) ||
+            if (!moduleFiles.Any(f => f.Equals("variables.tf", StringComparison.OrdinalIgnoreCase) ||
                                   f.Equals("variable.tf", StringComparison.OrdinalIgnoreCase)))
             {
                 result.Errors.Add("No variables file found. Either 'variables.tf' or 'variable.tf' is required");
             }
 
             // Check if at least one outputs file exists
-            if (!rootFiles.Any(f => f.Equals("outputs.tf", StringComparison.OrdinalIgnoreCase) ||
+            if (!moduleFiles.Any(f => f.Equals("outputs.tf", StringComparison.OrdinalIgnoreCase) ||
                                   f.Equals("output.tf", StringComparison.OrdinalIgnoreCase)))
             {
                 result.Errors.Add("No outputs file found. Either 'outputs.tf' or 'output.tf' is required");
@@ -91,6 +113,16 @@ public class TerraformModuleValidator : ITerraformModuleValidator
         }
 
         return result;
+    }
+
+    private bool HasRequiredFiles(IEnumerable<string> files)
+    {
+        // Check if the directory has at least one required file and one of each required type
+        return files.Any(f => _requiredFiles.Contains(f, StringComparer.OrdinalIgnoreCase)) &&
+               files.Any(f => f.Equals("variables.tf", StringComparison.OrdinalIgnoreCase) ||
+                             f.Equals("variable.tf", StringComparison.OrdinalIgnoreCase)) &&
+               files.Any(f => f.Equals("outputs.tf", StringComparison.OrdinalIgnoreCase) ||
+                             f.Equals("output.tf", StringComparison.OrdinalIgnoreCase));
     }
 
     private async Task ExtractTgzArchive(Stream archiveStream, string destinationPath)
