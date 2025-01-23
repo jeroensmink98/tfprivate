@@ -114,5 +114,19 @@ if (!app.Environment.IsProduction())
 
 app.MapControllers();
 
+// Validate storage connection
+try
+{
+    using var scope = app.Services.CreateScope();
+    var storageService = scope.ServiceProvider.GetRequiredService<IStorageService>();
+    await storageService.ValidateConnectionAsync();
+    logger.LogInformation("Successfully validated Azure Storage connection");
+}
+catch (Exception ex)
+{
+    logger.LogCritical(ex, "Failed to validate Azure Storage connection. Application will now exit.");
+    Environment.Exit(1);
+}
+
 app.Run();
 

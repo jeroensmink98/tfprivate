@@ -25,6 +25,7 @@ public interface IStorageService
     Task UploadFromStreamAsync(string containerName, string blobName, Stream content);
     Task UploadFromStreamAsync(string containerName, string blobName, Stream content, IDictionary<string, string>? metadata);
     Task SetBlobMetadataAsync(string containerName, string blobName, IDictionary<string, string> metadata);
+    Task ValidateConnectionAsync();
 }
 
 public class StorageService : IStorageService
@@ -49,6 +50,19 @@ public class StorageService : IStorageService
         }
 
         _blobServiceClient = new BlobServiceClient(_connectionString);
+    }
+
+    public async Task ValidateConnectionAsync()
+    {
+        try
+        {
+            // Try to get account info which will validate the credentials
+            await _blobServiceClient.GetAccountInfoAsync();
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException("Failed to validate Azure Storage connection. Please check your credentials and connection string.", ex);
+        }
     }
 
     public async Task<IEnumerable<string>> ListVersionsAsync(string containerName, string prefix)
