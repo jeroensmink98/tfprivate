@@ -16,15 +16,12 @@ public class StorageServiceTest
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string>
             {
-                {"Azure:Storage:AccountName", "satfmodulestolx00"},
-                {"Azure:Storage:AccountKey", "13qxndyQZ6qnOLnX3ZFDVUD11GoVZk0vrD5E1nRX0HS60GwfssDcAJW3NMr1bS5feJ2LITtftycb"}
+                {"Azure:Storage:AccountName", ""},
+                {"Azure:Storage:AccountKey", ""}
             })
             .Build();
 
-        /**
-        "AccountName": "satfmodulestolx00",
-        "AccountKey": "13qxndyQZ6qnOLnX3ZFDVUD11GoVZk0vrD5E1nRX0HS60GwfssDcAJW3NMr1bS5feJ2LITtftycb"
-        **/
+
 
         _storageService = new StorageService(configuration);
     }
