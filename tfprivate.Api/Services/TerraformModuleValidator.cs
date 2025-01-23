@@ -127,10 +127,14 @@ public class TerraformModuleValidator : ITerraformModuleValidator
 
     private async Task ExtractTgzArchive(Stream archiveStream, string destinationPath)
     {
-        using var gzipStream = new GZipInputStream(archiveStream);
+        // Create a memory stream to buffer the input
+        using var memoryStream = new MemoryStream();
+        await archiveStream.CopyToAsync(memoryStream);
+        memoryStream.Position = 0;
+
+        using var gzipStream = new GZipInputStream(memoryStream);
         using var tarArchive = TarArchive.CreateInputTarArchive(gzipStream, System.Text.Encoding.UTF8);
 
         tarArchive.ExtractContents(destinationPath);
-        await Task.CompletedTask; // Since TarArchive doesn't have async methods
     }
 }

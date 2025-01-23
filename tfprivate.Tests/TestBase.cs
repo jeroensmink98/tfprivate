@@ -12,16 +12,28 @@ public class TestBase : IDisposable
 
     static TestBase()
     {
+        // Load environment variables before any tests run
         EnvLoader.Load();
+
+        // Set storage connection string for tests
+        if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("AZURE_STORAGE_CONNECTION_STRING")))
+        {
+            Environment.SetEnvironmentVariable("AZURE_STORAGE_CONNECTION_STRING", "UseDevelopmentStorage=true");
+        }
     }
 
     public TestBase()
     {
-        ApiBaseUrl = Environment.GetEnvironmentVariable("API_BASE_URL") ?? "http://localhost:443";
-        TestApiKey = Environment.GetEnvironmentVariable("API_KEY") ?? "test-api-key";
+        ApiBaseUrl = Environment.GetEnvironmentVariable("API_BASE_URL") ?? "https://localhost:443";
+        TestApiKey = Environment.GetEnvironmentVariable("API_KEY") ?? "Cd16694YKkKxvjJC1rzCfe0T/fmQLTajDND3vQ2ic1I=";
         TestNamespace = Environment.GetEnvironmentVariable("TEST_NAMESPACE") ?? "test-namespace";
 
-        _client = new HttpClient
+        var handler = new HttpClientHandler
+        {
+            ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true // Ignore SSL certificate errors for local development
+        };
+
+        _client = new HttpClient(handler)
         {
             BaseAddress = new Uri(ApiBaseUrl)
         };
