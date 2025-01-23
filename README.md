@@ -2,11 +2,29 @@
 
 A private registry API for hosting and managing Terraform modules. This API implements the [Terraform Registry Protocol](https://developer.hashicorp.com/terraform/registry/api-docs) for private modules.
 
+I was annoyed with there not being a good open source Terraform private registry that I could host on my own infrastructure. so I made this.
+
 ```mermaid
 graph LR
 A[Terraform] --> B[tfprivate.API]
 B --> C[Azure Blob Storage]
 ```
+
+## Table of Contents
+
+- [Features](#features)
+- [Getting Started](#getting-started)
+  - [1. Azure Storage Setup](#1-azure-storage-setup)
+  - [2. Configuration](#2-configuration)
+  - [3. Run the Application](#3-run-the-application)
+  - [4. Using the Registry](#4-using-the-registry)
+- [API Endpoints](#api-endpoints)
+- [Authentication](#authentication)
+- [Application Insights](#application-insights)
+- [Docker Setup](#docker-setup)
+- [Configuration](#configuration)
+- [Using with Terraform](#using-with-terraform)
+- [Module Structure Requirements](#module-structure-requirements)
 
 ## Features
 
