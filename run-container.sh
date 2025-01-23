@@ -1,7 +1,7 @@
 #!/bin/bash
-STORAGE_ACCOUNTNAME="satfmodulestolx00"
-STORAGE_ACCESS_KEY="13qxndyQZ6qnOLnX3ZFDVUD11GoVZk0vrD5E1nRX0HS60GwfssDcAJW3NMr1bS5feJ2LITtftycb+AStze3edQ=="
-API_KEY="Cd16694YKkKxvjJC1rzCfe0T/fmQLTajDND3vQ2ic1I="
+STORAGE_ACCOUNTNAME=""
+STORAGE_ACCESS_KEY=""
+API_KEY=""
 # Optional: Set APP_INSIGHT_KEY if you want to enable Application Insights
 APP_INSIGHT_KEY=""
 
