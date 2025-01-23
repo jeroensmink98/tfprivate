@@ -84,8 +84,7 @@ Add the module to your Terraform configuration:
 
 ```hcl
 module "example" {
-  source  = "localhost:443/myorg/my-module/aws"
-  version = "1.0.0"
+  source  = "https://your-registry-url/v1/module/acme/my_module/1.0.0"
 
   # Module inputs
   name     = "example"
@@ -96,85 +95,39 @@ module "example" {
 Configure authentication in `~/.terraformrc`:
 
 ```hcl
-credentials "localhost:443" {
+credentials "your-registry-url" {
   token = "your-api-key"
 }
 ```
 
 ## API Endpoints
 
-### List Modules
+- List Modules: `GET /v1/modules/{namespace}`
+  Lists all modules in a namespace.
+  Example: `GET /v1/modules/acme`
 
-```http
-GET /v1/modules/{namespace}
-```
+- Get Latest Module Version: `GET /v1/module/{namespace}/{module_name}`
+  Returns the download URL for the latest version of a module.
+  Example: `GET /v1/module/acme/my_module`
 
-Lists all modules in a namespace.
+- Get Specific Module Version: `GET /v1/module/{namespace}/{module_name}/{version}`
+  Returns the download URL for a specific version of a module.
+  Example: `GET /v1/module/acme/my_module/1.0.0`
 
-Example:
+- Upload Module: `POST /v1/module/{namespace}/{module_name}/{version}`
+  Upload a new module version (requires API key).
+  Example:
 
-```http
-GET /v1/modules/acme
-```
+  ```bash
+  curl -X POST \
+    -H "X-API-Key: your-api-key" \
+    -F "file=@module.tgz" \
+    https://your-registry-url/v1/module/acme/my_module/1.0.0
+  ```
 
-### Get Latest Module Version
-
-```http
-GET /v1/module/{namespace}/{module_name}
-```
-
-Returns the download URL for the latest version of a module.
-
-Example:
-
-```http
-GET /v1/module/acme/my_module
-```
-
-### Get Specific Module Version
-
-```http
-GET /v1/module/{namespace}/{module_name}/{version}
-```
-
-Returns the download URL for a specific version of a module.
-
-Example:
-
-```http
-GET /v1/module/acme/my_module/1.0.0
-```
-
-### Upload Module
-
-```http
-POST /v1/module/{namespace}/{module_name}/{version}
-```
-
-Upload a new module version (requires API key).
-
-Example:
-
-```bash
-curl -X POST \
-  -H "X-API-Key: your-api-key" \
-  -F "file=@module.tgz" \
-  https://your-registry-url/v1/module/acme/my_module/1.0.0
-```
-
-### List Module Versions
-
-```http
-GET /v1/modules/{namespace}/{module_name}/versions
-```
-
-Lists all available versions for a specific module.
-
-Example:
-
-```http
-GET /v1/modules/acme/my_module/versions
-```
+- List Module Versions: `GET /v1/modules/{namespace}/{module_name}/versions`
+  Lists all available versions for a specific module.
+  Example: `GET /v1/modules/acme/my_module/versions`
 
 ## Authentication
 
