@@ -209,13 +209,13 @@ services:
 
 ### Environment Variables
 
-| Variable               | Description                                  | Required |
-| ---------------------- | -------------------------------------------- | -------- |
-| STORAGE_ACCOUNTNAME    | Azure Storage account name                   | Yes      |
-| STORAGE_ACCESS_KEY     | Azure Storage access key                     | Yes      |
-| API_KEY                | API key for authentication                   | Yes      |
-| APP_INSIGHT_KEY        | Application Insights connection string       | No       |
-| ASPNETCORE_ENVIRONMENT | Runtime environment (defaults to Production) | No       |
+| Variable               | Description                                                                   | Required |
+| ---------------------- | ----------------------------------------------------------------------------- | -------- |
+| STORAGE_ACCOUNTNAME    | Azure Storage account name                                                    | Yes      |
+| STORAGE_ACCESS_KEY     | Azure Storage access key                                                      | Yes      |
+| API_KEY                | API key for authentication (can be generated using `openssl rand -base64 32`) | Yes      |
+| APP_INSIGHT_KEY        | Application Insights connection string                                        | No       |
+| ASPNETCORE_ENVIRONMENT | Runtime environment (defaults to Production)                                  | No       |
 
 ### Environment File (.env)
 
