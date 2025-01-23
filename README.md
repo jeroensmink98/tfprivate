@@ -130,9 +130,9 @@ The API will be served on `http://localhost:80` or `https://localhost:443` (depe
     https://your-registry-url/v1/module/acme/my_module/1.0.0
   ```
 
-- GET /v1/modules/{namespace}/{module_name}/versions  
+- GET `/v1/modules/{namespace}/{module_name}/versions`  
   Lists all available versions of a module.  
-  Example: /v1/modules/acme/my_module/versions
+  Example: `/v1/modules/acme/my_module/versions`
 
 ## Authentication
 
@@ -189,11 +189,11 @@ If neither is provided, telemetry will be disabled.
 Configuration
 Environment Variables
 
-- STORAGE_ACCOUNTNAME: Azure Storage account name
-- STORAGE_ACCESS_KEY: Azure Storage access key
-- API_KEY: API key for authentication
-- APP_INSIGHT_KEY: Application Insights connection string (optional)
-- ASPNETCORE_ENVIRONMENT: Runtime environment (defaults to "Production")
+- `STORAGE_ACCOUNTNAME`: Azure Storage account name
+- `STORAGE_ACCESS_KEY`: Azure Storage access key
+- `API_KEY`: API key for authentication
+- `APP_INSIGHT_KEY`: Application Insights connection string (optional)
+- `ASPNETCORE_ENVIRONMENT`: Runtime environment (defaults to "Production")
 
 Using with Terraform
 Once the API is running at https://your-registry-url, you can reference modules in your Terraform configurations by specifying the registry URL:
