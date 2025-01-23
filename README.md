@@ -2,6 +2,10 @@
 
 A private registry API for hosting and managing Terraform modules. This API implements the [Terraform Registry Protocol](https://developer.hashicorp.com/terraform/registry/api-docs) for private modules.
 
+graph LR
+A[Terraform] --> B[tfprivate.API]
+B --> C[Azure Blob Storage]
+
 ## Features
 
 - Upload and download Terraform modules
