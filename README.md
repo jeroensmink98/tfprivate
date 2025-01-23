@@ -50,7 +50,7 @@ Create a `.env` file with the following content (add to .gitignore):
 ```env
 STORAGE_ACCOUNTNAME=your_account_name
 STORAGE_ACCESS_KEY=your_access_key
-API_KEY=your_api_key
+API_KEY=your_api_key # use `openssl rand -base64 32` to generate
 APP_INSIGHT_KEY=your_app_insights_key #optional
 ```
 
