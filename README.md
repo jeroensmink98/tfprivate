@@ -17,6 +17,25 @@ B --> C[Azure Blob Storage]
 - Docker support
 - Optional Application Insights monitoring
 
+## Getting Started
+
+### 1. Azure Storage Setup
+
+1. Create an Azure Storage account in your Azure subscription
+2. Copy the storage account name and primary access key from the "Access keys" section
+3. These values will be needed for the `STORAGE_ACCOUNTNAME` and `STORAGE_ACCESS_KEY` environment variables
+
+### 2. Configuration
+
+Create a `.env` file with the following content (add to .gitignore):
+
+```env
+STORAGE_ACCOUNTNAME=your_account_name
+STORAGE_ACCESS_KEY=your_access_key
+API_KEY=your_api_key
+APP_INSIGHT_KEY=your_app_insights_key #optional
+```
+
 ## API Endpoints
 
 ### List Modules
