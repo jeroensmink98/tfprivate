@@ -80,12 +80,15 @@ if (isAppInsightsEnabled)
 // Configure Kestrel
 builder.Services.Configure<Microsoft.AspNetCore.Server.Kestrel.Core.KestrelServerOptions>(options =>
 {
-    // Listen on port 443 for HTTPS
-    options.ListenAnyIP(443, listenOptions =>
+    if (builder.Environment.IsProduction())
     {
-        listenOptions.UseHttps();
-    });
-    // Also listen on port 80 for HTTP
+        // In production, listen on both HTTP and HTTPS
+        options.ListenAnyIP(443, listenOptions =>
+        {
+            listenOptions.UseHttps();
+        });
+    }
+    // Always listen on HTTP
     options.ListenAnyIP(80);
 });
 

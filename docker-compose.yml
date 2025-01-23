@@ -1,0 +1,41 @@
+
+
+services:
+  api:
+    build:
+      context: ./tfprivate.Api
+      dockerfile: Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:80
+    env_file:
+      - .env
+    networks:
+      - tfprivate
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/v1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - tfprivate
+    depends_on:
+      - api
+
+networks:
+  tfprivate:
+    name: tfprivate
+
+volumes:
+  caddy_data:
+  caddy_config: 
