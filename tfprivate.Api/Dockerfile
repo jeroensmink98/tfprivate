@@ -16,9 +16,6 @@ FROM mcr.microsoft.com/dotnet/aspnet:9.0
 WORKDIR /app
 COPY --from=build /app/publish .
 
-# Create directory for the certificate
-RUN mkdir -p /root/.aspnet/https/
-
 # Expose only HTTPS port
 EXPOSE 443
 
