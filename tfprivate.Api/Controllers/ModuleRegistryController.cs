@@ -394,5 +394,41 @@ public class ModuleRegistryController : ControllerBase
             return Error(500, ex.Message);
         }
     }
+
+    [HttpDelete("v1/module/{namespace}/{module_name}/{version}")]
+    [ApiKey]
+    public async Task<IActionResult> DeleteModule(
+        [FromRoute] string @namespace,
+        [FromRoute] string module_name,
+        [FromRoute] string version)
+    {
+        try
+        {
+            // Construct the blob path
+            var blobPath = $"{@namespace}/{module_name}/v{version}/module.tgz";
+
+            try
+            {
+                // Check if module exists first
+                await _storageService.GetDownloadUrlAsync(ModuleContainer, blobPath);
+            }
+            catch (FileNotFoundException)
+            {
+                _loggingService.LogModuleDelete(@namespace, module_name, version, false, "Module not found");
+                return Error(404, $"Module {@namespace}/{module_name} version {version} not found");
+            }
+
+            // Module exists, proceed with deletion
+            await _storageService.DeleteBlobAsync(ModuleContainer, blobPath);
+
+            _loggingService.LogModuleDelete(@namespace, module_name, version, true);
+            return Ok(new { message = $"Module {@namespace}/{module_name} version {version} deleted successfully" });
+        }
+        catch (Exception ex)
+        {
+            _loggingService.LogModuleDelete(@namespace, module_name, version, false, ex.Message);
+            return Error(500, $"Failed to delete module: {ex.Message}");
+        }
+    }
 }
 

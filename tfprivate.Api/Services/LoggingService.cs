@@ -8,6 +8,7 @@ public interface ILoggingService
     void LogModuleValidation(string @namespace, string moduleName, string version, bool isValid, IEnumerable<string> errors);
     void LogModuleUpload(string @namespace, string moduleName, string version, bool success, string? error = null);
     void LogModuleDownload(string @namespace, string moduleName, string version);
+    void LogModuleDelete(string @namespace, string moduleName, string version, bool success, string? error = null);
 }
 
 public class LoggingService : ILoggingService
@@ -62,5 +63,18 @@ public class LoggingService : ILoggingService
         _logger.LogInformation(
             "Module downloaded: {@namespace}/{moduleName} v{version}",
             @namespace, moduleName, version);
+    }
+
+    public void LogModuleDelete(string @namespace, string moduleName, string version, bool success, string? error = null)
+    {
+        if (success)
+        {
+            _logger.LogInformation("Module deleted: {Namespace}/{ModuleName} version {Version}", @namespace, moduleName, version);
+        }
+        else
+        {
+            _logger.LogError("Failed to delete module: {Namespace}/{ModuleName} version {Version}. Error: {Error}",
+                @namespace, moduleName, version, error);
+        }
     }
 }
