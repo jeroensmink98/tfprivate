@@ -84,3 +84,6 @@ upload-module.sh
 modules
 
 my_module
+
+# Mac OS metadata files
+._*
