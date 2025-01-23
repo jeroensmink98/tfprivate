@@ -194,3 +194,53 @@ credentials "your-registry-url" {
   token = "your-api-key"
 }
 ```
+
+## Module Structure Requirements
+
+When uploading a module to the registry, it must follow a specific structure. The module can be organized in one of two ways:
+
+### 1. Files in Root Directory
+
+All required files must be directly in the root of the `.tgz` archive:
+
+```
+module.tgz
+├── main.tf           (required)
+├── providers.tf      (required)
+├── variables.tf      (required - can also be named variable.tf)
+├── outputs.tf        (required - can also be named output.tf)
+└── README.md         (optional)
+```
+
+### 2. Files in Subdirectory
+
+Alternatively, all required files can be in a subdirectory within the `.tgz` archive:
+
+```
+module.tgz
+└── my-module/
+    ├── main.tf           (required)
+    ├── providers.tf      (required)
+    ├── variables.tf      (required - can also be named variable.tf)
+    ├── outputs.tf        (required - can also be named output.tf)
+    └── README.md         (optional)
+```
+
+### Required Files
+
+- `main.tf`: Main Terraform configuration file
+- `providers.tf`: Provider configuration
+- Either `variables.tf` or `variable.tf`: Variable definitions
+- Either `outputs.tf` or `output.tf`: Output definitions
+
+### Optional Files
+
+- `README.md` or `readme.md`: Module documentation
+
+### Creating the Archive
+
+To create a valid module archive:
+
+1. Ensure all required files are present
+2. Create a tar archive: `tar -czf module.tgz <files or directory>`
+3. Upload using the registry API

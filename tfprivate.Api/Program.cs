@@ -12,6 +12,7 @@ builder.Configuration.SetBasePath(builder.Environment.ContentRootPath)
 
 // Add services to the container.
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSingleton<ILoggingService, LoggingService>();
 
 // Only add Swagger in non-production environments
 if (!builder.Environment.IsProduction())
@@ -89,6 +90,7 @@ builder.Services.Configure<Microsoft.AspNetCore.Server.Kestrel.Core.KestrelServe
 });
 
 builder.Services.AddSingleton<IStorageService, StorageService>();
+builder.Services.AddSingleton<ITerraformModuleValidator, TerraformModuleValidator>();
 
 var app = builder.Build();
 
