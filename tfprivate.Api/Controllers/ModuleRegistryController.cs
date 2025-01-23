@@ -380,7 +380,7 @@ public class ModuleRegistryController : ControllerBase
                 {
                     new
                     {
-                        versions = versions.Select(v => new { version = v }).ToArray()
+                        versions = versions.Select(version => new { version }).ToArray()
                     }
                 }
             });
