@@ -1,3 +1,0 @@
-### Get module download URL
-GET https://localhost:7056/api/v1/modules/test/test/1.0.0
-Accept: application/json
