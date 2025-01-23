@@ -164,19 +164,19 @@ Create a `.env` file with the following content (add to .gitignore):
 STORAGE_ACCOUNTNAME=your_account_name
 STORAGE_ACCESS_KEY=your_access_key
 API_KEY=your_api_key
-APP_INSIGHT_KEY=your_app_insights_key
+APP_INSIGHT_KEY=your_app_insights_key (optional)
 ```
 
-## Development Setup
-
-1. Clone the repository
-2. Copy `appsettings.json.example` to `appsettings.json` and fill in your values
-3. Run the application:
-   ```bash
-   dotnet run --project tfprivate.Api
-   ```
-
 ## Using with Terraform
+
+The API follows the Terraform Registry Protocol and URL structure.
+
+the url structure is: `https://{hostname}/v1/module/{namespace}/{module_name}/{version}`
+
+- `hostname` is the hostname of the API, e.g. `localhost:5057`
+- `namespace` is the namespace of the module, e.g. `acme`
+- `module_name` is the name of the module, e.g. `my_module`
+- `version` is the version of the module, e.g. `1.0.0`
 
 Add the registry to your Terraform configuration:
 
