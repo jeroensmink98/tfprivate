@@ -30,12 +30,11 @@ jobs:
       - name: Build
         run: dotnet build --no-restore --configuration Release
 
-      - name: Login to GitHub Container Registry
+      - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build and push Docker image
         if: success()
@@ -43,4 +42,4 @@ jobs:
         with:
           context: ./tfprivate.Api
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/tfprivate-api:latest
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/tfprivate-api:latest
