@@ -12,13 +12,6 @@ services:
       - tfprivate
     ports:
       - "3000:80"
-    labels:
-      - traefik.enable=true
-      - "traefik.http.routers.api.rule=Host(`modules.devopsfrontier.com`) || Host(`dsccwsksccckwkckg8s0occs.195.201.220.84.sslip.io`)"
-      - traefik.http.services.api.loadbalancer.server.port=80
-      - traefik.http.routers.api.entrypoints=websecure
-      - traefik.http.routers.api.tls=true
-      - traefik.http.routers.api.tls.certresolver=letsencrypt
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:80/v1"]
       interval: 30s
