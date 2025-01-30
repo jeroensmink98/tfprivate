@@ -33,6 +33,14 @@ Table of Contents
 - Optional Application Insights support
 - Docker support
 
+## TLDR
+
+- Create storage account and get credentials
+- Pull container and set `.env` variables
+- Run container
+- Upload module using `POST /v1/module/{namespace}/{module_name}/{version}`
+- Use module in Terraform configuration
+
 ## Getting Started
 
 ### Azure Storage Setup
@@ -211,6 +219,8 @@ credentials "your-registry-url" {
   token = "your_api_key"
 }
 ```
+
+## Terraform Module Structure
 
 Module Structure Requirements
 Terraform requires certain files within your archived module:
