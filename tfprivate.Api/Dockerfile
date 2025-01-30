@@ -16,8 +16,4 @@ FROM mcr.microsoft.com/dotnet/aspnet:9.0
 WORKDIR /app
 COPY --from=build /app/publish .
 
-# Expose only HTTPS port
-EXPOSE 80
-EXPOSE 443
-
 ENTRYPOINT ["dotnet", "tfprivate.Api.dll"] 
