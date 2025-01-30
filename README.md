@@ -1,6 +1,6 @@
 # Terraform Private Registry API
 
-A self-hosted, open source Terraform registry API that implements the Terraform Registry Protocol for hosting and managing private modules. Inspired by the lack of a straightforward solution to self-host a private registry, this project aims to provide a simple, configurable alternative that runs on your own infrastructure.
+A self-hosted, open source Terraform registry API that implements the Terraform Registry Protocol for hosting and managing private modules on Azure Blob Storage. Inspired by the lack of a straightforward solution to self-host a private registry.
 
 ```mermaid
 graph LR
