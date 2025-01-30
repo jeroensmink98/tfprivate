@@ -43,4 +43,4 @@ jobs:
         with:
           context: ./tfprivate.Api
           push: true
-          tags: tfprivate-api:latest
+          tags: ghcr.io/${{ github.repository_owner }}/tfprivate-api:latest
