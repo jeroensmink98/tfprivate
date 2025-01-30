@@ -17,16 +17,7 @@ WORKDIR /app
 COPY --from=build /app/publish .
 
 # Expose only HTTPS port
+EXPOSE 80
 EXPOSE 443
-
-# Set environment variables
-ENV ASPNETCORE_URLS=http://+:80
-ENV ASPNETCORE_ENVIRONMENT=Production
-
-
-# Note: Sensitive environment variables should be provided at runtime:
-# - STORAGE_ACCOUNTNAME
-# - STORAGE_ACCESS_KEY
-# - API_KEY
 
 ENTRYPOINT ["dotnet", "tfprivate.Api.dll"] 
